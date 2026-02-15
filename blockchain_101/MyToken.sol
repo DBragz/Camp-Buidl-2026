@@ -7,7 +7,7 @@ contract MyToken {
   // Who should get our tokens to begin with?
   address owner;
 
-  mapping (address user => uint256 balance) public balances;
+  mapping(address user => uint256 balance) public balances;
 
   // Called when contract is deployed to Ethereum.
   constructor() {
@@ -19,7 +19,7 @@ contract MyToken {
     balance[owner] = 1000;
   }
 
-  function transfer (uint amount, address recipient) public {
+  function transfer(uint amount, address recipient) public {
     // Safety first.
     require(amount <= balances[msg.sender]);
     require(balances[msg.sender] - amount <= balances[msg.sender]);
