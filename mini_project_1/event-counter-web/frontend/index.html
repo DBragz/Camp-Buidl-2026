@@ -4,66 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Event Counter — Listen for ThresholdReached</title>
+  <link rel="stylesheet" href="./styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 480px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      background: #0f0f12;
-      color: #e4e4e7;
-      min-height: 100vh;
-    }
-    h1 { font-size: 1.35rem; font-weight: 600; margin-bottom: 0.5rem; }
-    .sub { color: #71717a; font-size: 0.9rem; margin-bottom: 1.5rem; }
-    label { display: block; font-size: 0.85rem; color: #a1a1aa; margin-bottom: 0.35rem; }
-    input {
-      width: 100%;
-      padding: 0.6rem 0.75rem;
-      border: 1px solid #3f3f46;
-      border-radius: 8px;
-      background: #18181b;
-      color: #fff;
-      font-size: 0.9rem;
-      margin-bottom: 1rem;
-    }
-    input::placeholder { color: #52525b; }
-    button {
-      padding: 0.6rem 1rem;
-      border-radius: 8px;
-      border: none;
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
-      margin-right: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-    .btn-primary { background: #6366f1; color: #fff; }
-    .btn-primary:hover { background: #4f46e5; }
-    .btn-secondary { background: #27272a; color: #e4e4e7; border: 1px solid #3f3f46; }
-    .btn-secondary:hover { background: #3f3f46; }
-    .card {
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 12px;
-      padding: 1.25rem;
-      margin-top: 1.5rem;
-    }
-    .card h2 { font-size: 1rem; margin: 0 0 0.75rem 0; color: #a1a1aa; }
-    .status { font-size: 1rem; margin: 0; }
-    .status.waiting { color: #fbbf24; }
-    .status.triggered { color: #34d399; }
-    .event-detail { margin-top: 0.5rem; font-size: 0.9rem; color: #a1a1aa; }
-    .counter-value { font-size: 1.5rem; font-weight: 600; color: #fff; margin: 0.5rem 0; }
-    .error { color: #f87171; font-size: 0.9rem; margin-top: 0.5rem; }
-    .hidden { display: none; }
-  </style>
 </head>
 <body>
   <h1>Event Counter</h1>
-  <p class="sub">Listen for <code>ThresholdReached</code> from the Counter contract.</p>
+  <p class="sub">Animation and status update only when the contract emits <code>ThresholdReached</code> (not from reading the threshold value).</p>
 
   <label for="contractAddress">Counter contract address</label>
   <input
@@ -84,15 +30,29 @@
   <div>
     <button type="button" class="btn-primary" id="btnStart">Start listening</button>
     <button type="button" class="btn-secondary" id="btnStop">Stop</button>
+    <button type="button" class="btn-secondary" id="btnRefresh">Refresh</button>
     <button type="button" class="btn-secondary" id="btnConnect">Connect wallet</button>
     <button type="button" class="btn-secondary" id="btnIncrement">Increment</button>
   </div>
 
-  <div class="card">
+  <div class="card card-counter">
     <h2>Counter state</h2>
-    <p id="counterName" class="counter-value">—</p>
-    <p id="counterDescription" class="event-detail">—</p>
-    <p id="counterNumber" class="counter-value">—</p>
+    <div class="counter-row">
+      <span class="counter-label">Name</span>
+      <span id="counterName" class="counter-value">—</span>
+    </div>
+    <div class="counter-row">
+      <span class="counter-label">Description</span>
+      <span id="counterDescription" class="counter-desc">—</span>
+    </div>
+    <div class="counter-row counter-row-main">
+      <span class="counter-label">Current value</span>
+      <span id="counterNumber" class="counter-value">—</span>
+    </div>
+    <div class="counter-row counter-row-main">
+      <span class="counter-label">Threshold</span>
+      <span id="counterThreshold" class="counter-value">—</span>
+    </div>
   </div>
 
   <div class="card">
@@ -102,150 +62,15 @@
     <p id="error" class="error hidden"></p>
   </div>
 
-  <script>
-    const COUNTER_ABI = [
-      'event ThresholdReached(uint256 number, uint256 threshold)',
-      'function number() view returns (uint256)',
-      'function name() view returns (string)',
-      'function description() view returns (string)',
-      'function threshold() view returns (uint256)',
-      'function increment()'
-    ];
+  <div id="thresholdOverlay" class="threshold-overlay hidden" aria-hidden="true">
+    <div class="confetti" id="confettiContainer"></div>
+    <div class="celebration-content">
+      <p class="celebration-title">Threshold reached!</p>
+      <p class="celebration-sub" id="celebrationDetail">number = 0, threshold = 0</p>
+      <button type="button" class="celebration-dismiss" id="btnDismissCelebration">Dismiss</button>
+    </div>
+  </div>
 
-    let provider = null;
-    let contract = null;
-    let listener = null;
-    let walletProvider = null;
-    let signer = null;
-
-    const contractAddressEl = document.getElementById('contractAddress');
-    const rpcUrlEl = document.getElementById('rpcUrl');
-    const btnStart = document.getElementById('btnStart');
-    const btnStop = document.getElementById('btnStop');
-    const btnConnect = document.getElementById('btnConnect');
-    const btnIncrement = document.getElementById('btnIncrement');
-    const statusEl = document.getElementById('status');
-    const eventDetailEl = document.getElementById('eventDetail');
-    const errorEl = document.getElementById('error');
-    const counterNameEl = document.getElementById('counterName');
-    const counterDescriptionEl = document.getElementById('counterDescription');
-    const counterNumberEl = document.getElementById('counterNumber');
-
-    function showError(msg) {
-      errorEl.textContent = msg || '';
-      errorEl.classList.toggle('hidden', !msg);
-    }
-
-    function setStatus(text, className) {
-      statusEl.textContent = text;
-      statusEl.className = 'status ' + (className || '');
-      if (className === 'triggered') {
-        eventDetailEl.classList.remove('hidden');
-      }
-    }
-
-    async function refreshCounterState() {
-      if (!contract) return;
-      try {
-        const [name, desc, num] = await Promise.all([
-          contract.name(),
-          contract.description(),
-          contract.number()
-        ]);
-        counterNameEl.textContent = name || '—';
-        counterDescriptionEl.textContent = desc || '—';
-        counterNumberEl.textContent = num != null ? String(num) : '—';
-      } catch (e) {
-        counterNameEl.textContent = '—';
-        counterDescriptionEl.textContent = '—';
-        counterNumberEl.textContent = '—';
-      }
-    }
-
-    function getProvider() {
-      const rpc = (rpcUrlEl.value || '').trim();
-      if (rpc) return new ethers.JsonRpcProvider(rpc);
-      return new ethers.JsonRpcProvider('https://rpc.sepolia.org');
-    }
-
-    btnStart.addEventListener('click', async () => {
-      const address = (contractAddressEl.value || '').trim();
-      if (!address) {
-        setStatus('Please enter a contract address.', 'waiting');
-        showError('Contract address required.');
-        return;
-      }
-      if (!ethers.isAddress(address)) {
-        setStatus('Invalid address.', 'waiting');
-        showError('Invalid Ethereum address.');
-        return;
-      }
-      showError('');
-      try {
-        provider = getProvider();
-        contract = new ethers.Contract(address, COUNTER_ABI, provider);
-        await refreshCounterState();
-        setStatus('Listening for ThresholdReached…', 'waiting');
-        eventDetailEl.classList.add('hidden');
-        eventDetailEl.textContent = '';
-
-        if (listener) contract.off('ThresholdReached', listener);
-        listener = (number, threshold) => {
-          setStatus('Event triggered!', 'triggered');
-          eventDetailEl.textContent = `number = ${number.toString()}, threshold = ${threshold.toString()}`;
-          eventDetailEl.classList.remove('hidden');
-          refreshCounterState();
-        };
-        contract.on('ThresholdReached', listener);
-      } catch (e) {
-        setStatus('Error starting listener.', 'waiting');
-        showError(e.message || String(e));
-      }
-    });
-
-    btnStop.addEventListener('click', () => {
-      if (contract && listener) {
-        contract.off('ThresholdReached', listener);
-        listener = null;
-      }
-      setStatus('Stopped.', 'waiting');
-      eventDetailEl.classList.add('hidden');
-    });
-
-    btnConnect.addEventListener('click', async () => {
-      try {
-        walletProvider = new ethers.BrowserProvider(window.ethereum);
-        await walletProvider.send('eth_requestAccounts', []);
-        signer = await walletProvider.getSigner();
-        setStatus('Wallet connected. You can use Increment.', 'waiting');
-        showError('');
-      } catch (e) {
-        showError(e.message || String(e));
-      }
-    });
-
-    btnIncrement.addEventListener('click', async () => {
-      const address = (contractAddressEl.value || '').trim();
-      if (!address || !ethers.isAddress(address)) {
-        showError('Enter a valid contract address first.');
-        return;
-      }
-      if (!signer) {
-        showError('Connect wallet first.');
-        return;
-      }
-      try {
-        const contractWithSigner = new ethers.Contract(address, COUNTER_ABI, signer);
-        const tx = await contractWithSigner.increment();
-        setStatus('Increment sent. Waiting for confirmation…', 'waiting');
-        await tx.wait();
-        setStatus('Increment confirmed. Listening for events…', 'waiting');
-        await refreshCounterState();
-        showError('');
-      } catch (e) {
-        showError(e.message || String(e));
-      }
-    });
-  </script>
+  <script src="./script.js"></script>
 </body>
 </html>
