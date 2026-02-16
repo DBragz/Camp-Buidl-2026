@@ -2,7 +2,7 @@
 
 A Solidity counter contract with a configurable **name**, **description**, and **threshold**. When the counter reaches the threshold, it emits a `ThresholdReached` event so off-chain apps (e.g. a website) can react.
 
-**Authors:** DBrags and Cursor AI
+**Authors:** DBragz and Cursor AI
 
 ---
 

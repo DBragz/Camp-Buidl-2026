@@ -2,7 +2,7 @@
 
 A small web app that listens for the **ThresholdReached** event from the [Counter](../event-counter-block) smart contract. It shows the counter’s name, description, and current value, and lets you connect a wallet and call **Increment** to trigger the threshold.
 
-**Authors:** DBrags and Cursor AI
+**Authors:** DBragz and Cursor AI
 
 ---
 
