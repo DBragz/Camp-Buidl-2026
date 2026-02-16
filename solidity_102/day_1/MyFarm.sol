@@ -1,11 +1,12 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MyFram { 
   // Reward paramaters.
-  addresss public lockedToken;
-  addresss public rewardToken;
+  address public lockedToken;
+  address public rewardToken;
 
   //  Track how much is deposited.
   mapping(address => uint) public timeOfDeposit;
@@ -32,7 +33,7 @@ contract MyFram {
     uint lengthOfDeposit = block.timestamp - timeOfDeposit[msg.sender];
 
     rewardAmount = rewardAmount * lengthOfDeposit;
-    IERC20(rewardAddress).transferFrom(address(this), msg.sender, rewardToken);
+    IERC20(rewardAddress).transferFrom(address(this), msg.sender, rewardAmount);
 
     timeOfDeposit[msg.sender] = block.timestamp;
 
