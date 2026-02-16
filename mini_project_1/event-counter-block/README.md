@@ -24,7 +24,7 @@ A Solidity counter contract with a configurable **name**, **description**, and *
 event-counter-block/
 ├── foundry.toml
 ├── src/
-│   └── Counter.sol      # Counter contract
+│   └── Counter.sol     # Counter contract
 ├── script/
 │   └── Counter.s.sol   # Deployment script
 └── test/
