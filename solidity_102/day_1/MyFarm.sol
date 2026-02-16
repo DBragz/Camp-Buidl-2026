@@ -23,14 +23,22 @@ contract MyFram {
   function deposit(uint amount) external {
     IERC20(depositAddress).transferFrom(msg.sender, address(this), amount);
     timeOfDeposit[msg.sender] = block.timestamp;
-    amountDeposit[msg.sender] += amountToDeposit;
+    amountDeposit[msg.sender] += amount;
   }
 
   function claim() external {
+    uint rewardPerSecond = 55;
+    uint rewardAmount = rewardPerSecond * amountDeposit[msg.sender];
+    uint lengthOfDeposit = block.timestamp - timeOfDeposit[msg.sender];
+
+    rewardAmount = rewardAmount * lengthOfDeposit;
+    IERC20(rewardAddress).transferFrom(address(this), msg.sender, rewardToken);
+
+    timeOfDeposit[msg.sender] = block.timestamp;
 
   }
 
-  function claim() external {
+  function withdraw() external {
 
   }
 }
