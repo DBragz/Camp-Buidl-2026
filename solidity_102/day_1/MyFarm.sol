@@ -15,8 +15,9 @@ contract MyFram {
   address public depositAddress;
   address public rewardAddress;
 
-  constructor() {
-
+  constructor(address _lockedToken, address _rewardToken) {
+    lockedToken = _lockedToken;
+    rewardToken = _rewardToken;
   }
 
   function deposit(uint amount) external {
