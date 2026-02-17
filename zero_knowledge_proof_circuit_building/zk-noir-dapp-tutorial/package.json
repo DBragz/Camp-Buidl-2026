@@ -1,0 +1,17 @@
+{
+  "name": "zk-noir-dapp-tutorial",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "app",
+    "circuits",
+    "contracts"
+  ],
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
