@@ -3,7 +3,8 @@
 To install dependencies:
 
 ```bash
-bun install
+npm install -g yarn
+yarn install
 ```
 
 To run:
